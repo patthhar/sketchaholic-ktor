@@ -1,0 +1,1 @@
+rootProject.name = "darthwithap.com.sketchaholic-ktor"
