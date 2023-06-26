@@ -7,6 +7,8 @@ import io.ktor.server.application.ApplicationCallPipeline.ApplicationPhase.Plugi
 import io.ktor.server.sessions.*
 import io.ktor.util.*
 
+val server = DrawingServer()
+
 fun main(args: Array<String>): Unit =
   io.ktor.server.netty.EngineMain.main(args)
 
