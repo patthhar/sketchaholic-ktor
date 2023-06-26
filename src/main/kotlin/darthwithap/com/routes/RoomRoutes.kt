@@ -3,6 +3,7 @@ package darthwithap.com.routes
 import darthwithap.com.data.Room
 import darthwithap.com.data.models.BasicApiResponse
 import darthwithap.com.data.models.CreateRoomRequest
+import darthwithap.com.data.models.RoomResponse
 import darthwithap.com.server
 import darthwithap.com.utils.Constants.MAX_ROOM_SIZE
 import io.ktor.http.*
@@ -12,7 +13,23 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.roomRouting() {
-  route("/api/room") {
+  route("/api/rooms") {
+    get {
+      val searchQuery = call.parameters["search_query"]
+      if (searchQuery == null) {
+        call.respond(HttpStatusCode.BadRequest)
+        return@get
+      }
+
+      val roomsResult = server.rooms.filterKeys {
+        it.contains(searchQuery, ignoreCase = true)
+      }
+      val roomResponses = roomsResult.values.map {
+        RoomResponse(it.name, it.maxPlayers, it.players.size)
+      }.sortedBy { it.name }
+
+      call.respond(HttpStatusCode.OK, roomResponses)
+    }
 
     post {
       val roomReq = kotlin.runCatching {
