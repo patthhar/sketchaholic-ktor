@@ -13,71 +13,124 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.roomRouting() {
-  route("/api/rooms") {
-    get {
-      val searchQuery = call.parameters["search_query"]
-      if (searchQuery == null) {
-        call.respond(HttpStatusCode.BadRequest)
-        return@get
-      }
+  route("/api") {
+    route("rooms") {
+      get {
+        val searchQuery = call.parameters["search_query"]
+        if (searchQuery == null) {
+          call.respond(HttpStatusCode.BadRequest)
+          return@get
+        }
 
-      val roomsResult = server.rooms.filterKeys {
-        it.contains(searchQuery, ignoreCase = true)
-      }
-      val roomResponses = roomsResult.values.map {
-        RoomResponse(it.name, it.maxPlayers, it.players.size)
-      }.sortedBy { it.name }
+        val roomsResult = server.rooms.filterKeys {
+          it.contains(searchQuery, ignoreCase = true)
+        }
+        val roomResponses = roomsResult.values.map {
+          RoomResponse(it.name, it.maxPlayers, it.players.size)
+        }.sortedBy { it.name }
 
-      call.respond(HttpStatusCode.OK, roomResponses)
+        call.respond(HttpStatusCode.OK, roomResponses)
+      }
     }
 
-    post {
-      val roomReq = kotlin.runCatching {
-        call.receiveNullable<CreateRoomRequest>()
-      }.getOrNull()
+    route("room") {
 
-      if (roomReq == null) {
-        call.respondText(
-          text = "Invalid room request",
-          status = HttpStatusCode.BadRequest
-        )
-      } else {
-        if (server.rooms[roomReq.name] != null) {
-          call.respond(
-            HttpStatusCode.OK,
-            BasicApiResponse(
-              isSuccess = false,
-              message = "Room with name already exists"
-            )
-          )
-          return@post
+      get("join") {
+        val username = call.parameters["username"]
+        val roomName = call.parameters["roomName"]
+
+        if (username == null || roomName == null) {
+          call.respond(HttpStatusCode.BadRequest)
+          return@get
         }
-        if (roomReq.maxPlayers < 2) {
-          call.respond(
-            HttpStatusCode.OK,
-            BasicApiResponse(
-              isSuccess = false,
-              message = "Minimum room size is 2"
+
+        val room = server.rooms[roomName]
+
+        when {
+          room == null -> {
+            call.respond(
+              HttpStatusCode.OK,
+              BasicApiResponse(
+                isSuccess = false,
+                message = "Room with name: $roomName not found"
+              )
             )
-          )
-          return@post
-        }
-        if (roomReq.maxPlayers > MAX_ROOM_SIZE) {
-          call.respond(
-            HttpStatusCode.OK,
-            BasicApiResponse(
-              isSuccess = false,
-              message = "Maximum room size is ${MAX_ROOM_SIZE}}"
+          }
+
+          room.containsPlayer(username) -> {
+            call.respond(
+              HttpStatusCode.OK,
+              BasicApiResponse(
+                isSuccess = false,
+                message = "$username player already exists in the room"
+              )
             )
-          )
-          return@post
+          }
+
+          room.players.size >= room.maxPlayers -> {
+            call.respond(
+              HttpStatusCode.OK,
+              BasicApiResponse(
+                isSuccess = false,
+                message = "This room is already full"
+              )
+            )
+          }
+
+          else -> {
+            call.respond(HttpStatusCode.OK, BasicApiResponse(isSuccess = true))
+          }
         }
-        val room = Room(
-          name = roomReq.name,
-          maxPlayers = roomReq.maxPlayers
-        )
-        server.rooms[roomReq.name] = room
-        call.respond(HttpStatusCode.OK, BasicApiResponse(true))
+      }
+
+      post {
+        val roomReq = kotlin.runCatching {
+          call.receiveNullable<CreateRoomRequest>()
+        }.getOrNull()
+
+        if (roomReq == null) {
+          call.respondText(
+            text = "Invalid room request",
+            status = HttpStatusCode.BadRequest
+          )
+        } else {
+          if (server.rooms[roomReq.name] != null) {
+            call.respond(
+              HttpStatusCode.OK,
+              BasicApiResponse(
+                isSuccess = false,
+                message = "Room with name already exists"
+              )
+            )
+            return@post
+          }
+          if (roomReq.maxPlayers < 2) {
+            call.respond(
+              HttpStatusCode.OK,
+              BasicApiResponse(
+                isSuccess = false,
+                message = "Minimum room size is 2"
+              )
+            )
+            return@post
+          }
+          if (roomReq.maxPlayers > MAX_ROOM_SIZE) {
+            call.respond(
+              HttpStatusCode.OK,
+              BasicApiResponse(
+                isSuccess = false,
+                message = "Maximum room size is ${MAX_ROOM_SIZE}}"
+              )
+            )
+            return@post
+          }
+          val room = Room(
+            name = roomReq.name,
+            maxPlayers = roomReq.maxPlayers
+          )
+          server.rooms[roomReq.name] = room
+          call.respond(HttpStatusCode.OK, BasicApiResponse(true))
+        }
       }
     }
   }
