@@ -6,6 +6,7 @@ val googleGsonVersion = "2.10.1"
 plugins {
   kotlin("jvm") version "1.8.22"
   id("io.ktor.plugin") version "2.3.1"
+  id("org.jetbrains.kotlin.plugin.serialization") version "1.8.22"
 }
 
 group = "darthwithap.com"
@@ -24,6 +25,7 @@ repositories {
 dependencies {
   implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version")
   implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
+  implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
   implementation("io.ktor:ktor-serialization-gson-jvm:$ktor_version")
   implementation("io.ktor:ktor-server-websockets-jvm:$ktor_version")
   implementation("io.ktor:ktor-server-host-common-jvm:$ktor_version")
