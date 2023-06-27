@@ -28,8 +28,8 @@ fun getRandomWords(amount: Int = 3): List<String> {
   return result
 }
 
-fun String.transformToUnderscores() {
-  toCharArray().map {
+fun String.transformToUnderscores(): String {
+  return toCharArray().map {
     if (it != ' ') '_' else ' '
   }.joinToString(" ")
 }
