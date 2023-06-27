@@ -9,6 +9,34 @@ class Room(
   var players: List<Player> = listOf()
 ) {
 
+  private var phaseChangedListener: ((Phase) -> Unit)? = null
+  var phase = Phase.WAITING_FOR_PLAYERS
+    set(value) {
+      synchronized(field) {
+        field = value
+        phaseChangedListener?.let { change ->
+          change.invoke(value)
+        }
+      }
+    }
+
+  private fun setPhaseChangedListener(listener: (Phase)-> Unit) {
+    phaseChangedListener = listener
+  }
+
+  init {
+    setPhaseChangedListener { phase ->
+      when (phase) {
+        Phase.WAITING_FOR_PLAYERS -> waitingForPlayers()
+        Phase.WAITING_FOR_START -> waitingForPlayers()
+        Phase.NEW_ROUND -> waitingForPlayers()
+        Phase.GAME_RUNNING -> waitingForPlayers()
+        Phase.SHOW_WORD -> waitingForPlayers()
+        Phase.ENDED -> waitingForPlayers()
+      }
+    }
+  }
+
   suspend fun broadcast(message: String) {
     players.forEach { player ->
       if (player.socket.isActive) {
