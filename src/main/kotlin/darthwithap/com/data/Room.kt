@@ -1,11 +1,9 @@
 package darthwithap.com.data
 
-import darthwithap.com.data.models.Announcement
-import darthwithap.com.data.models.ChosenWord
-import darthwithap.com.data.models.GameState
-import darthwithap.com.data.models.PhaseChange
+import darthwithap.com.data.models.*
 import darthwithap.com.gson
 import darthwithap.com.utils.Constants.PENALTY_NOBODY_GUESSED
+import darthwithap.com.utils.getRandomWords
 import darthwithap.com.utils.transformToUnderscores
 import darthwithap.com.utils.words
 import io.ktor.websocket.*
@@ -22,6 +20,7 @@ class Room(
   private var winningPlayers = listOf<String>()
   private var word: String? = null
   private var currWords: List<String>? =  null
+  private var drawingPlayerIndex = 0
 
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
@@ -153,8 +152,15 @@ class Room(
     }
   }
 
+  @OptIn(DelicateCoroutinesApi::class)
   private fun newRound() {
-
+    currWords = getRandomWords()
+    val newWords = NewWords(currWords!!)
+    nextDrawingPlayerInOrder()
+    GlobalScope.launch {
+      drawingPlayer?.socket?.send(Frame.Text(gson.toJson(newWords)))
+      timeAndNotify(TIMER_NEW_ROUND_TO_GAME_RUNNING)
+    }
   }
 
   @OptIn(DelicateCoroutinesApi::class)
@@ -205,6 +211,19 @@ class Room(
 
   private fun ended() {
 
+  }
+
+  private fun nextDrawingPlayerInOrder() {
+    drawingPlayer?.isDrawing = false
+    if (players.isEmpty()) return
+    drawingPlayer = if (drawingPlayerIndex <= players.size - 1) {
+      players[drawingPlayerIndex]
+    } else {
+      players.last()
+    }
+
+    if (drawingPlayerIndex < players.size - 1) drawingPlayerIndex ++
+    else drawingPlayerIndex = 0
   }
 
   enum class Phase {
