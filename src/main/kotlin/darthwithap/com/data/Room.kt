@@ -2,9 +2,12 @@ package darthwithap.com.data
 
 import darthwithap.com.data.models.Announcement
 import darthwithap.com.data.models.ChosenWord
+import darthwithap.com.data.models.GameState
 import darthwithap.com.data.models.PhaseChange
 import darthwithap.com.gson
 import darthwithap.com.utils.Constants.PENALTY_NOBODY_GUESSED
+import darthwithap.com.utils.transformToUnderscores
+import darthwithap.com.utils.words
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 
@@ -18,15 +21,14 @@ class Room(
   private var drawingPlayer: Player? = null
   private var winningPlayers = listOf<String>()
   private var word: String? = null
+  private var currWords: List<String>? =  null
 
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
     set(value) {
       synchronized(field) {
         field = value
-        phaseChangedListener?.let { change ->
-          change.invoke(value)
-        }
+        phaseChangedListener?.invoke(value)
       }
     }
 
@@ -155,8 +157,32 @@ class Room(
 
   }
 
+  @OptIn(DelicateCoroutinesApi::class)
   private fun gameRunning() {
+    winningPlayers = listOf()
+    val wordToSend = word ?: currWords?.random() ?: words.random()
+    val underscoresWord = wordToSend.transformToUnderscores()
+    val drawingUsername = (drawingPlayer ?: players.random()).username
+    val gameStateForDrawingPlayer = GameState(
+      drawingUsername,
+      wordToSend
+    )
+    val gameStateForGuessingPlayers = GameState(
+      drawingUsername,
+      underscoresWord
+    )
+    GlobalScope.launch {
+      broadcastToAllExcept(
+        gson.toJson(gameStateForGuessingPlayers),
+        drawingPlayer?.clientId ?: players.random().clientId
+      )
+      drawingPlayer?.socket?.send(Frame.Text(gson.toJson(gameStateForDrawingPlayer)))
 
+      timeAndNotify(TIMER_GAME_RUNNING_TO_SHOW_WORD)
+      val phaseChange = PhaseChange(
+        Phase.GAME_RUNNING, TIMER_GAME_RUNNING_TO_SHOW_WORD, drawingPlayer?.username
+      )
+    }
   }
 
   @OptIn(DelicateCoroutinesApi::class)
