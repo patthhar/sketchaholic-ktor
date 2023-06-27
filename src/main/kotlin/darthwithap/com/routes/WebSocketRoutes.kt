@@ -12,6 +12,7 @@ import darthwithap.com.utils.Constants.TYPE_ANNOUNCEMENT
 import darthwithap.com.utils.Constants.TYPE_CHAT_MESSAGE
 import darthwithap.com.utils.Constants.TYPE_DRAW_DATA
 import darthwithap.com.utils.Constants.TYPE_JOIN_ROOM_HANDSHAKE
+import darthwithap.com.utils.Constants.TYPE_PHASE_CHANGE
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
@@ -79,6 +80,7 @@ fun Route.standardWebSocket(
             TYPE_DRAW_DATA -> DrawData::class.java
             TYPE_ANNOUNCEMENT -> Announcement::class.java
             TYPE_JOIN_ROOM_HANDSHAKE -> JoinRoomHandshake::class.java
+            TYPE_PHASE_CHANGE -> PhaseChange::class.java
             else -> BaseModel::class.java
           }
           val payload = gson.fromJson(message, type)

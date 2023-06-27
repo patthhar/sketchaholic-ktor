@@ -1,15 +1,19 @@
 package darthwithap.com.data
 
 import darthwithap.com.data.models.Announcement
+import darthwithap.com.data.models.PhaseChange
 import darthwithap.com.gson
 import io.ktor.websocket.*
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.*
 
 class Room(
   val name: String,
   var maxPlayers: Int,
   var players: List<Player> = listOf()
 ) {
+
+  private var timerJob: Job? = null
+  private var drawingPlayer: Player? = null
 
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
@@ -22,7 +26,7 @@ class Room(
       }
     }
 
-  private fun setPhaseChangedListener(listener: (Phase)-> Unit) {
+  private fun setPhaseChangedListener(listener: (Phase) -> Unit) {
     phaseChangedListener = listener
   }
 
@@ -67,6 +71,34 @@ class Room(
     return player
   }
 
+  @OptIn(DelicateCoroutinesApi::class)
+  private fun timeAndNotify(ms: Long) {
+    timerJob?.cancel()
+    timerJob = GlobalScope.launch {
+      val phaseChange = PhaseChange(
+        phase,
+        ms,
+        drawingPlayer?.username
+      )
+      repeat((ms / UPDATE_TIME_FREQUENCY).toInt()) {
+        if (it != 0) {
+          phaseChange.phase = null
+        }
+        broadcast(gson.toJson(phase))
+        phaseChange.time -= UPDATE_TIME_FREQUENCY
+        delay(UPDATE_TIME_FREQUENCY)
+      }
+      phase = when (phase) {
+        Phase.ENDED -> Phase.WAITING_FOR_START
+        Phase.WAITING_FOR_START -> Phase.NEW_ROUND
+        Phase.NEW_ROUND -> Phase.GAME_RUNNING
+        Phase.GAME_RUNNING -> Phase.SHOW_WORD
+        Phase.SHOW_WORD -> Phase.NEW_ROUND
+        else -> Phase.WAITING_FOR_PLAYERS
+      }
+    }
+  }
+
   suspend fun broadcast(message: String) {
     players.forEach { player ->
       if (player.socket.isActive) {
@@ -83,7 +115,7 @@ class Room(
     }
   }
 
-  fun containsPlayer(username: String) : Boolean {
+  fun containsPlayer(username: String): Boolean {
     return players.find { it.username == username } != null
   }
 
@@ -96,22 +128,34 @@ class Room(
   private fun newRound() {
 
   }
+
   private fun gameRunning() {
 
   }
+
   private fun showWord() {
 
   }
+
   private fun ended() {
 
   }
 
-  enum class Phase{
+  enum class Phase {
     WAITING_FOR_PLAYERS,
     WAITING_FOR_START,
     NEW_ROUND,
     GAME_RUNNING,
     SHOW_WORD,
     ENDED
+  }
+
+  companion object {
+    const val UPDATE_TIME_FREQUENCY = 1000L
+    const val TIMER_WAITING_FOR_PLAYERS = 1000000L
+    const val TIMER_WAITING_FOR_START_TO_NEW_ROUND = 30000L
+    const val TIMER_NEW_ROUND_TO_GAME_RUNNING = 20000L
+    const val TIMER_GAME_RUNNING_TO_SHOW_WORD = 60000L
+    const val TIMER_SHOW_WORD_TO_NEW_ROUND = 10000L
   }
 }
