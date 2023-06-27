@@ -8,8 +8,10 @@ import darthwithap.com.data.models.GameError.Companion.ERROR_ROOM_NOT_FOUND
 import darthwithap.com.gson
 import darthwithap.com.server
 import darthwithap.com.session.DrawingSession
+import darthwithap.com.utils.Constants
 import darthwithap.com.utils.Constants.TYPE_ANNOUNCEMENT
 import darthwithap.com.utils.Constants.TYPE_CHAT_MESSAGE
+import darthwithap.com.utils.Constants.TYPE_CHOSEN_WORD
 import darthwithap.com.utils.Constants.TYPE_DRAW_DATA
 import darthwithap.com.utils.Constants.TYPE_JOIN_ROOM_HANDSHAKE
 import darthwithap.com.utils.Constants.TYPE_PHASE_CHANGE
@@ -39,6 +41,11 @@ fun Route.webSocketRouting() {
           if (!room.containsPlayer(player.username)) {
             room.addPlayer(player.clientId, player.username, socket)
           }
+        }
+
+        is ChosenWord -> {
+          val room = server.rooms[payload.room] ?: return@standardWebSocket
+          room.setWordAndSwitchToGameRunning(payload.chosenWord)
         }
 
         is DrawData -> {
@@ -81,6 +88,7 @@ fun Route.standardWebSocket(
             TYPE_ANNOUNCEMENT -> Announcement::class.java
             TYPE_JOIN_ROOM_HANDSHAKE -> JoinRoomHandshake::class.java
             TYPE_PHASE_CHANGE -> PhaseChange::class.java
+            TYPE_CHOSEN_WORD -> ChosenWord::class.java
             else -> BaseModel::class.java
           }
           val payload = gson.fromJson(message, type)

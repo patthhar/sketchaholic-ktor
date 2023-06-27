@@ -1,8 +1,10 @@
 package darthwithap.com.data
 
 import darthwithap.com.data.models.Announcement
+import darthwithap.com.data.models.ChosenWord
 import darthwithap.com.data.models.PhaseChange
 import darthwithap.com.gson
+import darthwithap.com.utils.Constants.PENALTY_NOBODY_GUESSED
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 
@@ -14,6 +16,8 @@ class Room(
 
   private var timerJob: Job? = null
   private var drawingPlayer: Player? = null
+  private var winningPlayers = listOf<String>()
+  private var word: String? = null
 
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
@@ -34,11 +38,11 @@ class Room(
     setPhaseChangedListener { phase ->
       when (phase) {
         Phase.WAITING_FOR_PLAYERS -> waitingForPlayers()
-        Phase.WAITING_FOR_START -> waitingForPlayers()
-        Phase.NEW_ROUND -> waitingForPlayers()
-        Phase.GAME_RUNNING -> waitingForPlayers()
-        Phase.SHOW_WORD -> waitingForPlayers()
-        Phase.ENDED -> waitingForPlayers()
+        Phase.WAITING_FOR_START -> waitingForStart()
+        Phase.NEW_ROUND -> newRound()
+        Phase.GAME_RUNNING -> gameRunning()
+        Phase.SHOW_WORD -> showWord()
+        Phase.ENDED -> ended()
       }
     }
   }
@@ -119,6 +123,11 @@ class Room(
     return players.find { it.username == username } != null
   }
 
+  fun setWordAndSwitchToGameRunning(word: String) {
+    this.word = word
+    phase = Phase.GAME_RUNNING
+  }
+
   @OptIn(DelicateCoroutinesApi::class)
   private fun waitingForPlayers() {
     GlobalScope.launch {
@@ -150,8 +159,22 @@ class Room(
 
   }
 
+  @OptIn(DelicateCoroutinesApi::class)
   private fun showWord() {
-
+    GlobalScope.launch {
+      if (winningPlayers.isEmpty()) {
+        drawingPlayer?.let {
+          it.score -= PENALTY_NOBODY_GUESSED
+        }
+      }
+      word?.let {
+        val chosenWord = ChosenWord(it, name)
+        broadcast(gson.toJson(chosenWord))
+      }
+      timeAndNotify(TIMER_SHOW_WORD_TO_NEW_ROUND)
+      val phaseChange = PhaseChange(Phase.SHOW_WORD, TIMER_SHOW_WORD_TO_NEW_ROUND)
+      broadcast(gson.toJson(phaseChange))
+    }
   }
 
   private fun ended() {
