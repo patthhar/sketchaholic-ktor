@@ -1,5 +1,6 @@
 package darthwithap.com
 
+import com.google.gson.Gson
 import io.ktor.server.application.*
 import darthwithap.com.plugins.*
 import darthwithap.com.session.DrawingSession
@@ -8,6 +9,7 @@ import io.ktor.server.sessions.*
 import io.ktor.util.*
 
 val server = DrawingServer()
+val gson = Gson()
 
 fun main(args: Array<String>): Unit =
   io.ktor.server.netty.EngineMain.main(args)
