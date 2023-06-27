@@ -119,12 +119,29 @@ class Room(
     return players.find { it.username == username } != null
   }
 
+  @OptIn(DelicateCoroutinesApi::class)
   private fun waitingForPlayers() {
-
+    GlobalScope.launch {
+      val phaseChange = PhaseChange(
+        Phase.WAITING_FOR_PLAYERS,
+        TIMER_WAITING_FOR_PLAYERS
+      )
+      broadcast(gson.toJson(phaseChange))
+    }
   }
+
+  @OptIn(DelicateCoroutinesApi::class)
   private fun waitingForStart() {
-
+    GlobalScope.launch {
+      timeAndNotify(TIMER_WAITING_FOR_START_TO_NEW_ROUND)
+      val phaseChange = PhaseChange(
+        Phase.WAITING_FOR_PLAYERS,
+        TIMER_WAITING_FOR_START_TO_NEW_ROUND
+      )
+      broadcast(gson.toJson(phaseChange))
+    }
   }
+
   private fun newRound() {
 
   }
