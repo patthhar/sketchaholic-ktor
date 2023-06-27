@@ -8,6 +8,7 @@ class Room(
   var maxPlayers: Int,
   var players: List<Player> = listOf()
 ) {
+
   suspend fun broadcast(message: String) {
     players.forEach { player ->
       if (player.socket.isActive) {
@@ -28,4 +29,31 @@ class Room(
     return players.find { it.username == username } != null
   }
 
+  private fun waitingForPlayers() {
+
+  }
+  private fun waitingForStart() {
+
+  }
+  private fun newRound() {
+
+  }
+  private fun gameRunning() {
+
+  }
+  private fun showWord() {
+
+  }
+  private fun ended() {
+
+  }
+
+  enum class Phase{
+    WAITING_FOR_PLAYERS,
+    WAITING_FOR_START,
+    NEW_ROUND,
+    GAME_RUNNING,
+    SHOW_WORD,
+    ENDED
+  }
 }
