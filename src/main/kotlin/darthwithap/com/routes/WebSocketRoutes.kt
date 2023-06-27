@@ -2,12 +2,14 @@ package darthwithap.com.routes
 
 import com.google.gson.JsonParser
 import darthwithap.com.data.Room
+import darthwithap.com.data.models.Announcement
 import darthwithap.com.data.models.BaseModel
 import darthwithap.com.data.models.ChatMessage
 import darthwithap.com.data.models.DrawData
 import darthwithap.com.gson
 import darthwithap.com.server
 import darthwithap.com.session.DrawingSession
+import darthwithap.com.utils.Constants.TYPE_ANNOUNCEMENT
 import darthwithap.com.utils.Constants.TYPE_CHAT_MESSAGE
 import darthwithap.com.utils.Constants.TYPE_DRAW_DATA
 import io.ktor.server.routing.*
@@ -56,6 +58,7 @@ fun Route.standardWebSocket(
           val type = when (jsonObject.get("type").asString) {
             TYPE_CHAT_MESSAGE -> ChatMessage::class.java
             TYPE_DRAW_DATA -> DrawData::class.java
+            TYPE_ANNOUNCEMENT -> Announcement::class.java
             else -> BaseModel::class.java
           }
           val payload = gson.fromJson(message, type)
