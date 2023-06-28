@@ -14,6 +14,7 @@ object Constants {
   const val TYPE_PLAYERS_DATA_LIST = "TYPE_PLAYERS_DATA_LIST"
   const val TYPE_PING = "TYPE_PING"
   const val TYPE_PONG = "TYPE_PONG"
+  const val TYPE_DISCONNECT_REQUEST = "TYPE_DISCONNECT_REQUEST"
 
   const val PENALTY_NOBODY_GUESSED = 40
   const val GUESS_SCORE_DEFAULT = 80

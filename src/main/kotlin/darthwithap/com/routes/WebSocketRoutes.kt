@@ -11,6 +11,7 @@ import darthwithap.com.session.DrawingSession
 import darthwithap.com.utils.Constants.TYPE_ANNOUNCEMENT
 import darthwithap.com.utils.Constants.TYPE_CHAT_MESSAGE
 import darthwithap.com.utils.Constants.TYPE_CHOSEN_WORD
+import darthwithap.com.utils.Constants.TYPE_DISCONNECT_REQUEST
 import darthwithap.com.utils.Constants.TYPE_DRAW_DATA
 import darthwithap.com.utils.Constants.TYPE_GAME_RUNNING_STATE
 import darthwithap.com.utils.Constants.TYPE_JOIN_ROOM_HANDSHAKE
@@ -70,6 +71,10 @@ fun Route.webSocketRouting() {
         is Pong -> {
           server.players[clientId]?.receivedPong()
         }
+
+        is DisconnectRequest -> {
+          server.playerLeft(clientId, true)
+        }
       }
     }
   }
@@ -103,6 +108,7 @@ fun Route.standardWebSocket(
             TYPE_CHOSEN_WORD -> ChosenWord::class.java
             TYPE_GAME_RUNNING_STATE -> GameRunningState::class.java
             TYPE_PING -> Pong::class.java
+            TYPE_DISCONNECT_REQUEST -> DisconnectRequest::class.java
             else -> BaseModel::class.java
           }
           val payload = gson.fromJson(message, type)
