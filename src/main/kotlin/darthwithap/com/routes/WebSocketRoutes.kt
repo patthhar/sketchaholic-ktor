@@ -56,7 +56,10 @@ fun Route.webSocketRouting() {
         }
 
         is ChatMessage -> {
-
+          val room = server.rooms[payload.roomName] ?: return@standardWebSocket
+          if (!room.checkAndNotifyPlayers(payload)) {
+            room.broadcast(message)
+          }
         }
       }
     }
