@@ -251,6 +251,16 @@ class Room(
     return false
   }
 
+  private suspend fun broadcastPlayerStates() {
+    val playerList = players.sortedByDescending { it.score }.map {
+      PlayerData(it.username, it.isDrawing, it.score, it.rank)
+    }
+    playerList.forEachIndexed { index, playerData ->
+      playerData.rank = index + 1
+    }
+    broadcast(gson.toJson(PlayersDataList(playerList)))
+  }
+
   private suspend fun sendWordToPlayerMidGame(player: Player) {
     val delay = when (phase) {
       Phase.WAITING_FOR_PLAYERS -> TIMER_WAITING_FOR_PLAYERS
