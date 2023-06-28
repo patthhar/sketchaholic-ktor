@@ -176,20 +176,20 @@ class Room(
     val wordToSend = word ?: currWords?.random() ?: words.random()
     val underscoresWord = wordToSend.transformToUnderscores()
     val drawingUsername = (drawingPlayer ?: players.random()).username
-    val gameStateForDrawingPlayer = GameState(
+    val gameRunningStateForDrawingPlayer = GameRunningState(
       drawingUsername,
       wordToSend
     )
-    val gameStateForGuessingPlayers = GameState(
+    val gameRunningStateForGuessingPlayers = GameRunningState(
       drawingUsername,
       underscoresWord
     )
     GlobalScope.launch {
       broadcastToAllExcept(
-        gson.toJson(gameStateForGuessingPlayers),
+        gson.toJson(gameRunningStateForGuessingPlayers),
         drawingPlayer?.clientId ?: players.random().clientId
       )
-      drawingPlayer?.socket?.send(Frame.Text(gson.toJson(gameStateForDrawingPlayer)))
+      drawingPlayer?.socket?.send(Frame.Text(gson.toJson(gameRunningStateForDrawingPlayer)))
 
       timeAndNotify(TIMER_GAME_RUNNING_TO_SHOW_WORD)
       val phaseChange = PhaseChange(
