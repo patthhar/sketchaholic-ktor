@@ -33,6 +33,8 @@ class Room(
   private val playerRemoveJobs = ConcurrentHashMap<String, Job>()
   private val leftPlayers = ConcurrentHashMap<String, Pair<Player, Int>>()
 
+  private var currRoundDrawData: List<String> = listOf()
+
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
     set(value) {
@@ -56,6 +58,16 @@ class Room(
         Phase.SHOW_WORD -> showWord()
         Phase.ENDED -> ended()
       }
+    }
+  }
+
+  fun addSerializedDrawInputs(drawAction: String) {
+    currRoundDrawData = currRoundDrawData + drawAction
+  }
+
+  private suspend fun sendCurrRoundDrawInputsToPlayer(player: Player) {
+    if (phase == Phase.GAME_RUNNING || phase == Phase.SHOW_WORD) {
+      player.socket.send(Frame.Text(gson.toJson(DrawInputs(currRoundDrawData))))
     }
   }
 
@@ -105,6 +117,7 @@ class Room(
     )
     sendWordToPlayerMidGame(newPlayer)
     broadcastPlayerStates()
+    sendCurrRoundDrawInputsToPlayer(newPlayer)
     broadcast(gson.toJson(announcement))
 
     return newPlayer
@@ -222,6 +235,7 @@ class Room(
 
   @OptIn(DelicateCoroutinesApi::class)
   private fun newRound() {
+    currRoundDrawData = listOf()
     currWords = getRandomWords()
     val newWords = NewWords(currWords!!)
     nextDrawingPlayerInOrder()
