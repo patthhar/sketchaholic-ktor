@@ -34,6 +34,7 @@ class Room(
   private val leftPlayers = ConcurrentHashMap<String, Pair<Player, Int>>()
 
   private var currRoundDrawData: List<String> = listOf()
+  var lastDrawData: DrawData? = null
 
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
@@ -68,6 +69,15 @@ class Room(
   private suspend fun sendCurrRoundDrawInputsToPlayer(player: Player) {
     if (phase == Phase.GAME_RUNNING || phase == Phase.SHOW_WORD) {
       player.socket.send(Frame.Text(gson.toJson(DrawInputs(currRoundDrawData))))
+    }
+  }
+
+  private suspend fun finishOffDrawing() {
+    lastDrawData?.let {
+      if (currRoundDrawData.isNotEmpty() && it.motionEvent == 2) {
+        val finishDrawData = it.copy(motionEvent = 1)
+        broadcast(gson.toJson(finishDrawData))
+      }
     }
   }
 
@@ -177,8 +187,14 @@ class Room(
       phase = when (phase) {
         Phase.ENDED -> Phase.WAITING_FOR_START
         Phase.WAITING_FOR_START -> Phase.NEW_ROUND
-        Phase.NEW_ROUND -> Phase.GAME_RUNNING
-        Phase.GAME_RUNNING -> Phase.SHOW_WORD
+        Phase.NEW_ROUND -> {
+          word = null
+          Phase.GAME_RUNNING
+        }
+        Phase.GAME_RUNNING -> {
+          finishOffDrawing()
+          Phase.SHOW_WORD
+        }
         Phase.SHOW_WORD -> Phase.NEW_ROUND
         else -> Phase.WAITING_FOR_PLAYERS
       }

@@ -61,6 +61,7 @@ fun Route.webSocketRouting() {
             room.broadcastToAllExcept(message, clientId)
             room.addSerializedDrawInputs(message)
           }
+          room.lastDrawData = payload
         }
 
         is DrawAction -> {
