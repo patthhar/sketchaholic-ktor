@@ -230,7 +230,7 @@ class Room(
         it.score += score.toInt()
       }
       drawingPlayer?.let {
-        it.score += (GUESS_SCORE_FOR_DRAWING_PLAYER + (1 - timePercentage) * GUESS_SCORE_DRAWER_MULTIPLIER).toInt()
+        it.score += ((GUESS_SCORE_FOR_DRAWING_PLAYER / players.size) + (1 - timePercentage) * GUESS_SCORE_DRAWER_MULTIPLIER).toInt()
       }
       val announcement = Announcement(
         message = "${message.from} guessed the word",
