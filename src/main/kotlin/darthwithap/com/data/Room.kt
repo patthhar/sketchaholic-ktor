@@ -64,8 +64,29 @@ class Room(
     username: String,
     socket: WebSocketSession
   ): Player {
-    val player = Player(username, socket, clientId)
-    players += player
+    var indexToAdd = players.size - 1
+    val newPlayer = if (leftPlayers.contains(clientId)) {
+      val leftPlayer = leftPlayers[clientId]
+      leftPlayer?.first?.let {
+        it.socket = socket
+        it.isDrawing = drawingPlayer?.clientId == clientId
+        indexToAdd = leftPlayer.second
+        playerRemoveJobs[clientId]?.cancel()
+        playerRemoveJobs.remove(clientId)
+        leftPlayers.remove(clientId)
+        it
+      } ?: Player(username, socket, clientId)
+    } else Player(username, socket, clientId)
+
+    indexToAdd = when {
+      players.isEmpty() -> 0
+      indexToAdd >= players.size -> players.size -1
+      else -> indexToAdd
+    }
+
+    val mutablePlayersList = players.toMutableList()
+    mutablePlayersList.add(indexToAdd, newPlayer)
+    players = mutablePlayersList.toList()
 
     if (players.size == 1) {
       phase = Phase.WAITING_FOR_PLAYERS
@@ -82,11 +103,11 @@ class Room(
       System.currentTimeMillis(),
       Announcement.TYPE_PLAYER_JOINED
     )
-    sendWordToPlayerMidGame(player)
+    sendWordToPlayerMidGame(newPlayer)
     broadcastPlayerStates()
     broadcast(gson.toJson(announcement))
 
-    return player
+    return newPlayer
   }
 
   @OptIn(DelicateCoroutinesApi::class)
