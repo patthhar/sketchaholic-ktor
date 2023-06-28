@@ -15,6 +15,7 @@ import darthwithap.com.utils.Constants.TYPE_DRAW_DATA
 import darthwithap.com.utils.Constants.TYPE_GAME_RUNNING_STATE
 import darthwithap.com.utils.Constants.TYPE_JOIN_ROOM_HANDSHAKE
 import darthwithap.com.utils.Constants.TYPE_PHASE_CHANGE
+import darthwithap.com.utils.Constants.TYPE_PING
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
@@ -40,6 +41,10 @@ fun Route.webSocketRouting() {
           server.playerJoined(player)
           if (!room.containsPlayer(player.username)) {
             room.addPlayer(player.clientId, player.username, socket)
+          } else {
+            val playerInRoom = room.players.find { it.clientId == clientId }
+            playerInRoom?.socket =socket
+            playerInRoom?.startPinging()
           }
         }
 
@@ -60,6 +65,10 @@ fun Route.webSocketRouting() {
           if (!room.checkAndNotifyPlayers(payload)) {
             room.broadcast(message)
           }
+        }
+
+        is Pong -> {
+          server.players[clientId]?.receivedPong()
         }
       }
     }
@@ -93,6 +102,7 @@ fun Route.standardWebSocket(
             TYPE_PHASE_CHANGE -> PhaseChange::class.java
             TYPE_CHOSEN_WORD -> ChosenWord::class.java
             TYPE_GAME_RUNNING_STATE -> GameRunningState::class.java
+            TYPE_PING -> Pong::class.java
             else -> BaseModel::class.java
           }
           val payload = gson.fromJson(message, type)
