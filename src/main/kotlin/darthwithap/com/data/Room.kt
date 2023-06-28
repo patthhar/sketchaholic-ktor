@@ -77,9 +77,18 @@ class Room(
       System.currentTimeMillis(),
       Announcement.TYPE_PLAYER_JOINED
     )
+    sendWordToPlayerMidGame(player)
+    broadcastPlayerStates()
     broadcast(gson.toJson(announcement))
 
     return player
+  }
+
+  @OptIn(DelicateCoroutinesApi::class)
+  fun removePlayer(clientId: String) {
+    GlobalScope.launch {
+      broadcastPlayerStates()
+    }
   }
 
   @OptIn(DelicateCoroutinesApi::class)
@@ -165,6 +174,7 @@ class Room(
     val newWords = NewWords(currWords!!)
     nextDrawingPlayerInOrder()
     GlobalScope.launch {
+      broadcastPlayerStates()
       drawingPlayer?.socket?.send(Frame.Text(gson.toJson(newWords)))
       timeAndNotify(TIMER_NEW_ROUND_TO_GAME_RUNNING)
     }
@@ -206,6 +216,7 @@ class Room(
           it.score -= PENALTY_NOBODY_GUESSED
         }
       }
+      broadcastPlayerStates()
       word?.let {
         val chosenWord = ChosenWord(it, name)
         broadcast(gson.toJson(chosenWord))
@@ -232,6 +243,7 @@ class Room(
       drawingPlayer?.let {
         it.score += ((GUESS_SCORE_FOR_DRAWING_PLAYER / players.size) + (1 - timePercentage) * GUESS_SCORE_DRAWER_MULTIPLIER).toInt()
       }
+      broadcastPlayerStates()
       val announcement = Announcement(
         message = "${message.from} guessed the word",
         timestamp = System.currentTimeMillis(),
