@@ -2,6 +2,7 @@ package darthwithap.com.data
 
 import darthwithap.com.data.models.*
 import darthwithap.com.gson
+import darthwithap.com.server
 import darthwithap.com.utils.Constants.GUESS_SCORE_DEFAULT
 import darthwithap.com.utils.Constants.GUESS_SCORE_DRAWER_MULTIPLIER
 import darthwithap.com.utils.Constants.GUESS_SCORE_FOR_DRAWING_PLAYER
@@ -13,6 +14,7 @@ import darthwithap.com.utils.transformToUnderscores
 import darthwithap.com.utils.words
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import java.util.concurrent.ConcurrentHashMap
 
 class Room(
   val name: String,
@@ -26,7 +28,10 @@ class Room(
   private var word: String? = null
   private var currWords: List<String>? = null
   private var drawingPlayerIndex = 0
-  private var phaseStartTime = 0L;
+  private var phaseStartTime = 0L
+
+  private val playerRemoveJobs = ConcurrentHashMap<String, Job>()
+  private val leftPlayers = ConcurrentHashMap<String, Pair<Player, Int>>()
 
   private var phaseChangedListener: ((Phase) -> Unit)? = null
   var phase = Phase.WAITING_FOR_PLAYERS
@@ -86,8 +91,34 @@ class Room(
 
   @OptIn(DelicateCoroutinesApi::class)
   fun removePlayer(clientId: String) {
+    val player = players.find { it.clientId == clientId } ?: return
+    val index = players.indexOf(player)
+    leftPlayers[clientId] = player to index
+    players = players - player
+    playerRemoveJobs[clientId] = GlobalScope.launch {
+      delay(PLAYER_REMOVE_COOLDOWN)
+      val playerToRemove = leftPlayers[clientId]
+      leftPlayers.remove(clientId)
+      playerToRemove?.let {
+        players = players - it.first
+      }
+      playerRemoveJobs.remove(clientId)
+    }.job
+    val announcement = Announcement(
+      message = "${player.username} left the room",
+      timestamp = System.currentTimeMillis(),
+      announcementType = Announcement.TYPE_PLAYER_LEFT
+    )
     GlobalScope.launch {
       broadcastPlayerStates()
+      broadcast(gson.toJson(announcement))
+      if (players.size == 1) {
+        phase = Phase.WAITING_FOR_PLAYERS
+        timerJob?.cancel()
+      } else if (players.isEmpty()) {
+        kill()
+        server.rooms.remove(name)
+      }
     }
   }
 
@@ -326,6 +357,13 @@ class Room(
     else drawingPlayerIndex = 0
   }
 
+  private fun kill() {
+    playerRemoveJobs.values.forEach {
+      it.cancel()
+      timerJob?.cancel()
+    }
+  }
+
   enum class Phase {
     WAITING_FOR_PLAYERS,
     WAITING_FOR_START,
@@ -336,6 +374,8 @@ class Room(
   }
 
   companion object {
+    const val PLAYER_REMOVE_COOLDOWN = 60000L
+
     const val UPDATE_TIME_FREQUENCY = 1000L
     const val TIMER_WAITING_FOR_PLAYERS = 1000000L
     const val TIMER_WAITING_FOR_START_TO_NEW_ROUND = 30000L
