@@ -37,7 +37,7 @@ fun Route.roomRouting() {
 
       get("join") {
         val username = call.parameters["username"]
-        val roomName = call.parameters["roomName"]
+        val roomName = call.parameters["room_name"]
 
         if (username == null || roomName == null) {
           call.respond(HttpStatusCode.BadRequest)
