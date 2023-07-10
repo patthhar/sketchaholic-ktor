@@ -4,6 +4,7 @@ import darthwithap.com.data.Room
 import darthwithap.com.data.models.BasicApiResponse
 import darthwithap.com.data.models.CreateRoomRequest
 import darthwithap.com.data.models.RoomResponse
+import darthwithap.com.gson
 import darthwithap.com.server
 import darthwithap.com.utils.Constants.MAX_ROOM_SIZE
 import io.ktor.http.*
@@ -29,7 +30,7 @@ fun Route.roomRouting() {
           RoomResponse(it.name, it.maxPlayers, it.players.size)
         }.sortedBy { it.name }
 
-        call.respond(HttpStatusCode.OK, roomResponses)
+        call.respond(HttpStatusCode.OK, gson.toJson(roomResponses))
       }
     }
 
